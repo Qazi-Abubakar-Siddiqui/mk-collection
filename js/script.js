@@ -1,4 +1,18 @@
-// Temporary Starter Products (Phase 3 mein Firebase Firestore se live replace honge)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+import emailjs from "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/+esm";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  addDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
+import { SITE_CONFIG } from "./config.js";
+
+const app = initializeApp(SITE_CONFIG.firebase);
+const db = getFirestore(app);
+const SHIPPING_FEE = Number(SITE_CONFIG.shippingFee) || 300;
+
 const sampleProducts = [
   {
     id: "mk-1",
@@ -6,7 +20,7 @@ const sampleProducts = [
     category: "MK Closets",
     price: 5450,
     description: "Soft lawn & organza dupatta with delicate floral threadwork.",
-    image: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=700&q=80"
+    image: "assets/images/hero-closet.jpg"
   },
   {
     id: "mk-2",
@@ -14,7 +28,7 @@ const sampleProducts = [
     category: "MK Closets",
     price: 4200,
     description: "Minimalist pastel co-ord set tailored for effortless daytime grace.",
-    image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=700&q=80"
+    image: "assets/images/hero-closet.jpg"
   },
   {
     id: "ee-1",
@@ -22,7 +36,7 @@ const sampleProducts = [
     category: "Jewellery",
     price: 1850,
     description: "Lightweight gold-plated festive earrings with hand-set pearls.",
-    image: "https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=700&q=80"
+    image: "assets/images/hero-jewellery.jpg"
   },
   {
     id: "ee-2",
@@ -30,7 +44,7 @@ const sampleProducts = [
     category: "Jewellery",
     price: 1450,
     description: "Tarnish-resistant everyday wrist charm in warm champagne gold.",
-    image: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?auto=format&fit=crop&w=700&q=80"
+    image: "assets/images/hero-jewellery.jpg"
   },
   {
     id: "ee-3",
@@ -38,7 +52,7 @@ const sampleProducts = [
     category: "Home Essentials",
     price: 1600,
     description: "Hand-poured frosted glass jar candle for a calm, cozy room.",
-    image: "https://images.unsplash.com/photo-1602874801007-bd458bb1b8b6?auto=format&fit=crop&w=700&q=80"
+    image: "assets/images/hero-jewellery.jpg"
   },
   {
     id: "ee-4",
@@ -46,45 +60,65 @@ const sampleProducts = [
     category: "Home Essentials",
     price: 2100,
     description: "Aesthetic organizer tray for perfumes, rings & dressing table decor.",
-    image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=700&q=80"
+    image: "assets/images/hero-jewellery.jpg"
   }
 ];
 
+let allProducts = [...sampleProducts];
 let cart = JSON.parse(localStorage.getItem("mk_cart")) || [];
 let activeFilter = "all";
 let searchQuery = "";
 
-// DOM Elements
 const productsGrid = document.getElementById("productsGrid");
 const cartCountEl = document.getElementById("cartCount");
 const cartDrawer = document.getElementById("cartDrawer");
 const cartOverlay = document.getElementById("cartOverlay");
 const cartItemsContainer = document.getElementById("cartItemsContainer");
 const cartSubtotalEl = document.getElementById("cartSubtotal");
+const cartShippingEl = document.getElementById("cartShipping");
+const cartGrandTotalEl = document.getElementById("cartGrandTotal");
 const proceedCheckoutBtn = document.getElementById("proceedCheckoutBtn");
 const checkoutModal = document.getElementById("checkoutModal");
 const checkoutSummaryBox = document.getElementById("checkoutSummaryBox");
 const checkoutForm = document.getElementById("checkoutForm");
+const placeOrderBtn = document.getElementById("placeOrderBtn");
 const toastEl = document.getElementById("toast");
 
 function formatPKR(amount) {
-  return "PKR " + Number(amount).toLocaleString("en-PK");
+  return "PKR " + Number(amount || 0).toLocaleString("en-PK");
 }
 
 function showToast(message) {
   toastEl.textContent = message;
   toastEl.classList.add("show");
-  setTimeout(() => toastEl.classList.remove("show"), 2600);
+  setTimeout(() => toastEl.classList.remove("show"), 3000);
 }
 
-// Render Products
+async function loadProductsFromFirestore() {
+  try {
+    const querySnapshot = await getDocs(collection(db, "products"));
+    if (!querySnapshot.empty) {
+      allProducts = querySnapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      }));
+    } else {
+      allProducts = [...sampleProducts];
+    }
+  } catch (err) {
+    console.warn("Firestore products load fallback:", err.message);
+    allProducts = [...sampleProducts];
+  }
+  renderProducts();
+}
+
 function renderProducts() {
-  const filtered = sampleProducts.filter((item) => {
+  const filtered = allProducts.filter((item) => {
     const matchesCategory = activeFilter === "all" || item.category === activeFilter;
     const matchesSearch =
-      item.title.toLowerCase().includes(searchQuery) ||
-      item.description.toLowerCase().includes(searchQuery) ||
-      item.category.toLowerCase().includes(searchQuery);
+      (item.title || "").toLowerCase().includes(searchQuery) ||
+      (item.description || "").toLowerCase().includes(searchQuery) ||
+      (item.category || "").toLowerCase().includes(searchQuery);
     return matchesCategory && matchesSearch;
   });
 
@@ -98,15 +132,15 @@ function renderProducts() {
       (product) => `
       <article class="product-card">
         <div class="product-img-wrap">
-          <span class="product-tag">${product.category}</span>
-          <img src="${product.image}" alt="${product.title}" loading="lazy" />
+          <span class="product-tag">${product.category || "Collection"}</span>
+          <img src="${product.image || "assets/images/hero-closet.jpg"}" alt="${product.title}" loading="lazy" />
         </div>
         <div class="product-body">
           <h3 class="product-title">${product.title}</h3>
-          <p class="product-desc">${product.description}</p>
+          <p class="product-desc">${product.description || ""}</p>
           <div class="product-footer">
             <span class="product-price">${formatPKR(product.price)}</span>
-            <button class="add-cart-btn" onclick="addToCart('${product.id}')">+ Add to Bag</button>
+            <button class="add-cart-btn" data-add-id="${product.id}">+ Add to Bag</button>
           </div>
         </div>
       </article>
@@ -115,21 +149,32 @@ function renderProducts() {
     .join("");
 }
 
-// Cart Functions
+productsGrid.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-add-id]");
+  if (!btn) return;
+  addToCart(btn.dataset.addId);
+});
+
 function saveCart() {
   localStorage.setItem("mk_cart", JSON.stringify(cart));
   updateCartUI();
 }
 
 function addToCart(productId) {
-  const product = sampleProducts.find((p) => p.id === productId);
+  const product = allProducts.find((p) => p.id === productId);
   if (!product) return;
 
   const existing = cart.find((item) => item.id === productId);
   if (existing) {
     existing.qty += 1;
   } else {
-    cart.push({ ...product, qty: 1 });
+    cart.push({
+      id: product.id,
+      title: product.title,
+      price: Number(product.price) || 0,
+      image: product.image || "assets/images/hero-closet.jpg",
+      qty: 1
+    });
   }
 
   saveCart();
@@ -152,12 +197,28 @@ function removeFromCart(productId) {
   saveCart();
 }
 
+cartItemsContainer.addEventListener("click", (e) => {
+  const qtyBtn = e.target.closest("[data-qty-id]");
+  if (qtyBtn) {
+    changeQty(qtyBtn.dataset.qtyId, Number(qtyBtn.dataset.delta));
+    return;
+  }
+  const removeBtn = e.target.closest("[data-remove-id]");
+  if (removeBtn) {
+    removeFromCart(removeBtn.dataset.removeId);
+  }
+});
+
 function updateCartUI() {
   const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const shipping = cart.length > 0 ? SHIPPING_FEE : 0;
+  const grandTotal = subtotal + shipping;
 
   cartCountEl.textContent = totalItems;
   cartSubtotalEl.textContent = formatPKR(subtotal);
+  cartShippingEl.textContent = formatPKR(shipping);
+  cartGrandTotalEl.textContent = formatPKR(grandTotal);
   proceedCheckoutBtn.disabled = cart.length === 0;
 
   if (cart.length === 0) {
@@ -180,11 +241,11 @@ function updateCartUI() {
           <div class="cart-item-price">${formatPKR(item.price)}</div>
           <div>
             <div class="qty-controls">
-              <button class="qty-btn" onclick="changeQty('${item.id}', -1)">−</button>
+              <button type="button" class="qty-btn" data-qty-id="${item.id}" data-delta="-1">−</button>
               <span>${item.qty}</span>
-              <button class="qty-btn" onclick="changeQty('${item.id}', 1)">+</button>
+              <button type="button" class="qty-btn" data-qty-id="${item.id}" data-delta="1">+</button>
             </div>
-            <button class="remove-item" onclick="removeFromCart('${item.id}')">Remove</button>
+            <button type="button" class="remove-item" data-remove-id="${item.id}">Remove</button>
           </div>
         </div>
       </div>
@@ -193,7 +254,6 @@ function updateCartUI() {
     .join("");
 }
 
-// Drawer & Modal Controls
 function openCart() {
   cartDrawer.classList.add("open");
   cartOverlay.classList.add("open");
@@ -207,11 +267,13 @@ function closeCart() {
 function openCheckoutModal() {
   closeCart();
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const grandTotal = subtotal + SHIPPING_FEE;
   const itemsList = cart.map((i) => `${i.title} (x${i.qty})`).join(", ");
 
   checkoutSummaryBox.innerHTML = `
-    <strong>Order Summary:</strong> ${itemsList}<br/>
-    <strong>Total Payable:</strong> ${formatPKR(subtotal)}
+    <strong>Items:</strong> ${itemsList}<br/>
+    <strong>Subtotal:</strong> ${formatPKR(subtotal)} + <strong>Shipping:</strong> ${formatPKR(SHIPPING_FEE)}<br/>
+    <strong>Total Payable (COD):</strong> ${formatPKR(grandTotal)}
   `;
   checkoutModal.classList.add("open");
 }
@@ -220,7 +282,6 @@ function closeCheckoutModal() {
   checkoutModal.classList.remove("open");
 }
 
-// Filter & Search Listeners
 function setActiveFilter(filterValue) {
   activeFilter = filterValue;
 
@@ -236,7 +297,7 @@ function setActiveFilter(filterValue) {
 }
 
 document.querySelectorAll("#filterPills .pill, .nav-links .nav-link, .cat-card").forEach((el) => {
-  el.addEventListener("click", (e) => {
+  el.addEventListener("click", () => {
     const filterVal = el.dataset.filter;
     if (!filterVal) return;
     setActiveFilter(filterVal);
@@ -257,29 +318,138 @@ cartOverlay.addEventListener("click", closeCart);
 proceedCheckoutBtn.addEventListener("click", openCheckoutModal);
 document.getElementById("closeModalBtn").addEventListener("click", closeCheckoutModal);
 
-// Test Checkout Submit (Phase 5 mein EmailJS/Formspree + Firebase se connect hoga)
-checkoutForm.addEventListener("submit", (e) => {
-  e.preventDefault();
+function validateOrderInput({ customerName, phone, city, address }) {
+  if (customerName.length < 3 || !/^[a-zA-Z\s.'-]+$/.test(customerName)) {
+    return "Please enter a valid full name (at least 3 letters).";
+  }
+  const cleanPhone = phone.replace(/[\s-]/g, "");
+  if (!/^(\+923|923|03)\d{9}$/.test(cleanPhone)) {
+    return "Please enter a valid Pakistani mobile number (e.g. 0300-1234567).";
+  }
+  if (city.length < 2 || !/^[a-zA-Z\s.-]+$/.test(city)) {
+    return "Please enter a valid city name.";
+  }
+  if (address.length < 10) {
+    return "Please enter a complete delivery address (House #, Street, Area).";
+  }
+  return null;
+}
 
-  const orderData = {
-    customerName: document.getElementById("custName").value.trim(),
-    phone: document.getElementById("custPhone").value.trim(),
-    city: document.getElementById("custCity").value.trim(),
-    address: document.getElementById("custAddress").value.trim(),
-    note: document.getElementById("custNote").value.trim(),
-    items: cart,
-    total: cart.reduce((sum, item) => sum + item.price * item.qty, 0)
+async function sendOrderEmailNotification(orderId, orderPayload) {
+  const { publicKey, serviceId, templateId } = SITE_CONFIG.emailService || {};
+  if (!publicKey || !serviceId || !templateId) return;
+
+  const itemsFormatted = orderPayload.items
+    .map((i) => `- ${i.title} (x${i.qty}) — ${formatPKR(i.price * i.qty)}`)
+    .join("\n");
+
+  try {
+    await emailjs.send(
+      serviceId,
+      templateId,
+      {
+        order_id: orderId.slice(0, 7).toUpperCase(),
+        customer_name: orderPayload.customerName,
+        customer_phone: orderPayload.phone,
+        customer_city: orderPayload.city,
+        customer_address: orderPayload.address,
+        order_note: orderPayload.note || "None",
+        order_items: itemsFormatted,
+        subtotal: formatPKR(orderPayload.subtotal),
+        shipping_fee: formatPKR(orderPayload.shippingFee),
+        total_amount: formatPKR(orderPayload.total)
+      },
+      { publicKey }
+    );
+  } catch (emailErr) {
+    console.warn("Order saved, but email notification skipped:", emailErr);
+  }
+}
+
+checkoutForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (cart.length === 0) return;
+
+  const customerName = document.getElementById("custName").value.trim();
+  const phone = document.getElementById("custPhone").value.trim();
+  const city = document.getElementById("custCity").value.trim();
+  const address = document.getElementById("custAddress").value.trim();
+  const note = document.getElementById("custNote").value.trim();
+
+  const validationError = validateOrderInput({ customerName, phone, city, address });
+  if (validationError) {
+    showToast(validationError);
+    return;
+  }
+
+  placeOrderBtn.disabled = true;
+  placeOrderBtn.textContent = "Placing Order...";
+
+  const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const grandTotal = subtotal + SHIPPING_FEE;
+
+  const orderPayload = {
+    customerName,
+    phone: phone.replace(/[\s-]/g, ""),
+    city,
+    address,
+    note,
+    items: cart.map((i) => ({
+      id: i.id,
+      title: i.title,
+      price: i.price,
+      qty: i.qty
+    })),
+    subtotal,
+    shippingFee: SHIPPING_FEE,
+    total: grandTotal,
+    paymentMethod: "Cash on Delivery",
+    status: "Pending",
+    createdAt: serverTimestamp()
   };
 
-  console.log("Test Order Payload:", orderData);
-
-  cart = [];
-  saveCart();
-  checkoutForm.reset();
-  closeCheckoutModal();
-  showToast("Thank you! Your order has been placed.");
+  try {
+    const docRef = await addDoc(collection(db, "orders"), orderPayload);
+    await sendOrderEmailNotification(docRef.id, orderPayload);
+    cart = [];
+    saveCart();
+    checkoutForm.reset();
+    closeCheckoutModal();
+    showToast(`Order placed! ID: ${docRef.id.slice(0, 7).toUpperCase()}`);
+  } catch (err) {
+    console.error("Order save error:", err);
+    showToast("Could not place order. Please try again.");
+  } finally {
+    placeOrderBtn.disabled = false;
+    placeOrderBtn.textContent = "Place Order (Cash on Delivery)";
+  }
 });
 
-// Initial Render
+function syncContactAndSocialLinks() {
+  const waBtn = document.querySelector(".whatsapp-float");
+  if (waBtn && SITE_CONFIG.whatsappNumber) {
+    const cleanWa = String(SITE_CONFIG.whatsappNumber).replace(/[^\d]/g, "");
+    const defaultMsg = encodeURIComponent(
+      `Assalam-o-Alaikum ${SITE_CONFIG.brandName || "MK Collection"}! I would like to inquire about a product.`
+    );
+    waBtn.href = `https://wa.me/${cleanWa}?text=${defaultMsg}`;
+  }
+
+  const socialMap = {
+    Instagram: SITE_CONFIG.socials?.instagram,
+    Facebook: SITE_CONFIG.socials?.facebook,
+    TikTok: SITE_CONFIG.socials?.tiktok
+  };
+
+  Object.entries(socialMap).forEach(([label, url]) => {
+    const linkEl = document.querySelector(`.social-links a[aria-label="${label}"]`);
+    if (linkEl && url) {
+      linkEl.href = url;
+    }
+  });
+}
+
+syncContactAndSocialLinks();
 renderProducts();
 updateCartUI();
+loadProductsFromFirestore();

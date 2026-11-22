@@ -145,7 +145,6 @@
   </section>
 
   <!-- Footer -->
-  <!-- Footer -->
   <footer class="footer">
     <div class="container footer-inner">
       <div>
@@ -212,8 +211,15 @@
         <span>Subtotal</span>
         <strong id="cartSubtotal">PKR 0</strong>
       </div>
-      <p class="shipping-note">Delivery charges will be confirmed upon order call/message.</p>
-      <button class="btn btn-primary btn-full" id="proceedCheckoutBtn" disabled>
+      <div class="subtotal-row" style="font-size:0.92rem;color:var(--text-muted);">
+        <span>Nationwide Shipping</span>
+        <span id="cartShipping">PKR 300</span>
+      </div>
+      <div class="subtotal-row" style="border-top:1px solid var(--border-soft);padding-top:8px;margin-top:4px;">
+        <span>Total Payable</span>
+        <strong id="cartGrandTotal" style="color:var(--rose-dark);">PKR 0</strong>
+      </div>
+      <button class="btn btn-primary btn-full" id="proceedCheckoutBtn" style="margin-top:12px;" disabled>
         Proceed to Checkout
       </button>
     </div>
@@ -269,6 +275,6 @@
   <!-- Toast Notification -->
   <div class="toast" id="toast"></div>
 
-  <script src="js/script.js"></script>
+  <script type="module" src="js/script.js"></script>
 </body>
 </html>

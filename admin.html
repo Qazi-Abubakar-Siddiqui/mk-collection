@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MK Collection — Owner Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .admin-wrap {
+      padding: 36px 0 70px;
+      min-height: 75vh;
+    }
+    .login-card {
+      max-width: 420px;
+      margin: 40px auto;
+      background: var(--surface);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      box-shadow: var(--shadow-soft);
+    }
+    .login-card h1 {
+      font-family: var(--font-serif);
+      font-size: 2rem;
+      margin-bottom: 6px;
+    }
+    .login-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+    .admin-header-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .admin-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .admin-panel-box {
+      background: var(--surface);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.02);
+    }
+    .admin-form {
+      display: grid;
+      gap: 14px;
+      max-width: 640px;
+    }
+    .admin-form select {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-soft);
+      font-family: inherit;
+      font-size: 0.92rem;
+      background: #fff;
+    }
+    .table-wrap {
+      overflow-x: auto;
+    }
+    table.admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .admin-table th,
+    .admin-table td {
+      text-align: left;
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--border-soft);
+      vertical-align: middle;
+    }
+    .admin-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+      background: var(--bg-ivory);
+    }
+    .thumb-mini {
+      width: 46px;
+      height: 54px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .action-btn {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft);
+      background: var(--bg-ivory);
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-right: 6px;
+    }
+    .action-btn.danger {
+      color: #9e2a2b;
+      border-color: #f3c6c6;
+      background: #fff5f5;
+    }
+    .status-select {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-soft);
+      font-family: inherit;
+      font-size: 0.84rem;
+    }
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-inner">
+      <a href="index.html" class="brand">
+        <span class="brand-main">MK Collection</span>
+        <span class="brand-sub">Store Manager</span>
+      </a>
+      <div class="nav-actions" style="display:flex;gap:10px;align-items:center;">
+        <a href="index.html" class="btn btn-outline">View Storefront</a>
+        <button id="logoutBtn" class="btn btn-outline hidden">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container admin-wrap">
+    <!-- Login View -->
+    <section id="loginSection" class="login-card">
+      <span class="section-kicker">Owner Access</span>
+      <h1>Admin Sign In</h1>
+      <p>Sign in with your authorized store credentials to manage products and orders.</p>
+
+      <form id="loginForm" class="checkout-form" style="padding:0;">
+        <div class="form-group">
+          <label for="adminEmail">Email Address</label>
+          <input type="email" id="adminEmail" required placeholder="Enter your Email " />
+        </div>
+        <div class="form-group">
+          <label for="adminPassword">Password</label>
+          <input type="password" id="adminPassword" required placeholder="Password here" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="loginBtn">Sign In</button>
+      </form>
+    </section>
+
+    <!-- Dashboard View -->
+    <section id="dashboardSection" class="hidden">
+      <div class="admin-header-bar">
+        <div>
+          <span class="section-kicker">Store Management</span>
+          <h2 style="font-family:var(--font-serif);font-size:2rem;">MK Collection Dashboard</h2>
+        </div>
+        <small id="adminUserBadge" style="color:var(--text-muted);"></small>
+      </div>
+
+      <div class="admin-tabs">
+        <button type="button" class="pill active" data-tab="addTab">+ Add / Edit Product</button>
+        <button type="button" class="pill" data-tab="productsTab">Products List (<span id="prodCount">0</span>)</button>
+        <button type="button" class="pill" data-tab="ordersTab">Customer Orders (<span id="orderCount">0</span>)</button>
+      </div>
+
+      <!-- Tab 1: Add / Edit Product -->
+      <div id="addTab" class="admin-panel-box">
+        <h3 id="formHeading" style="font-family:var(--font-serif);font-size:1.6rem;margin-bottom:14px;">Add New Product</h3>
+        <form id="productForm" class="admin-form">
+          <input type="hidden" id="editingProductId" />
+
+          <div class="form-group">
+            <label for="prodTitle">Product Title *</label>
+            <input type="text" id="prodTitle" required placeholder="e.g. Crimson Velvet Embroidered Suit" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="prodCategory">Category *</label>
+              <select id="prodCategory" required>
+                <option value="MK Closets">MK Closets</option>
+                <option value="Jewellery">Jewellery</option>
+                <option value="Home Essentials">Home Essentials</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="prodPrice">Price (PKR) *</label>
+              <input type="number" id="prodPrice" min="1" required placeholder="e.g. 4800" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Product Photo *</label>
+            <input type="file" id="prodImageFile" accept="image/*" style="display:none;" />
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <button type="button" class="btn btn-outline" id="addProductImageBtn">
+                Add Product Image
+              </button>
+              <small id="uploadStatusText" style="color:var(--text-muted);">
+                Opens gallery on mobile or files on laptop
+              </small>
+            </div>
+
+            <div id="imagePreviewWrap" style="display:none;align-items:flex-start;gap:12px;margin-top:10px;">
+              <img id="imagePreview" src="" alt="Product Preview" style="width:110px;height:130px;object-fit:cover;border-radius:10px;border:1px solid var(--border-soft);" />
+              <button type="button" class="action-btn danger" id="removeProductImageBtn">
+                Remove Image
+              </button>
+            </div>
+
+            <input type="hidden" id="prodImage" required />
+          </div>
+
+          <div class="form-group">
+            <label for="prodDesc">Short Description</label>
+            <textarea id="prodDesc" rows="2" placeholder="Fabric details, style notes, or size info..."></textarea>
+          </div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button type="submit" class="btn btn-primary" id="saveProductBtn">Save Product</button>
+            <button type="button" class="btn btn-outline hidden" id="cancelEditBtn">Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tab 2: Products List -->
+      <div id="productsTab" class="admin-panel-box hidden">
+        <h3 style="font-family:var(--font-serif);font-size:1.6rem;margin-bottom:14px;">All Store Products</h3>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Photo</th>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="productsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 3: Customer Orders -->
+      <div id="ordersTab" class="admin-panel-box hidden">
+        <h3 style="font-family:var(--font-serif);font-size:1.6rem;margin-bottom:14px;">Recent Customer Orders</h3>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Contact &amp; City</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>
